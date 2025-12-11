@@ -1,0 +1,43 @@
+{
+  "total_tests": 6,
+  "passed_tests": 0,
+  "success_rate": 0.0,
+  "test_results": [
+    {
+      "test": "Health Check",
+      "status": "FAIL",
+      "details": "HTTP 404",
+      "timestamp": "2025-12-11T22:48:52.284567"
+    },
+    {
+      "test": "Stats Endpoint",
+      "status": "FAIL",
+      "details": "HTTP 404",
+      "timestamp": "2025-12-11T22:48:52.335168"
+    },
+    {
+      "test": "Top Directors",
+      "status": "FAIL",
+      "details": "HTTP 404",
+      "timestamp": "2025-12-11T22:48:52.380684"
+    },
+    {
+      "test": "Type Distribution",
+      "status": "FAIL",
+      "details": "HTTP 404",
+      "timestamp": "2025-12-11T22:48:52.434154"
+    },
+    {
+      "test": "Top Categories",
+      "status": "FAIL",
+      "details": "HTTP 404",
+      "timestamp": "2025-12-11T22:48:52.468957"
+    },
+    {
+      "test": "Sample Data",
+      "status": "FAIL",
+      "details": "HTTP 404",
+      "timestamp": "2025-12-11T22:48:52.505534"
+    }
+  ]
+}
