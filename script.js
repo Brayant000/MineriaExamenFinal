@@ -7,22 +7,21 @@ let showsCount = 0;
 const chartColors = {
     red: '#e50914',
     darkRed: '#b81d24',
-    gray: '#757575',
-    lightGray: '#cccccc',
-    blue: '#007bff',
-    green: '#28a745',
-    yellow: '#ffc107',
-    teal: '#20c997',
-    purple: '#6f42c1',
-    pink: '#e83e8c'
+    blue: '#3498db',
+    green: '#2ecc71',
+    yellow: '#f1c40f',
+    purple: '#9b59b6',
+    teal: '#1abc9c',
+    orange: '#e67e22'
 };
+
+// Configuración global de Chart.js para texto blanco
+Chart.defaults.color = '#fff';
+Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
 
 // Inicializar dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    // Mostrar fecha actual
-    document.getElementById('timestamp').textContent = `Actualizado: ${new Date().toLocaleString()}`;
-    
-    // Cargar datos del CSV
+    document.getElementById('timestamp').textContent = `Actualizado: ${new Date().toLocaleString('es-ES')}`;
     loadCSVData();
 });
 
@@ -30,78 +29,92 @@ document.addEventListener('DOMContentLoaded', function() {
 async function loadCSVData() {
     try {
         const response = await fetch('netflix-titles.csv');
+        if (!response.ok) {
+            throw new Error('No se pudo cargar el archivo CSV');
+        }
         const csvText = await response.text();
         
         Papa.parse(csvText, {
             header: true,
-            dynamicTyping: true,
+            skipEmptyLines: true,
             complete: function(results) {
-                netflixData = results.data;
+                netflixData = results.data.filter(row => row.title && row.title.trim() !== '');
+                console.log(`Cargados ${netflixData.length} títulos de Netflix`);
+                
+                // Ocultar loading y mostrar dashboard
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboard-content').style.display = 'block';
+                
                 processData();
             },
             error: function(error) {
-                console.error('Error cargando CSV:', error);
-                alert('Error al cargar el archivo CSV. Verifica que netflix-titles.csv esté en la misma carpeta.');
+                console.error('Error parseando CSV:', error);
+                showError('Error al parsear el archivo CSV.');
             }
         });
     } catch (error) {
         console.error('Error:', error);
-        alert('No se pudo cargar el archivo CSV.');
+        showError('No se pudo cargar el archivo CSV. Asegúrese de que netflix-titles.csv esté en el mismo directorio.');
     }
+}
+
+function showError(message) {
+    document.getElementById('loading').innerHTML = `
+        <div style="text-align: center; color: #e50914;">
+            <h2>⚠️ Error</h2>
+            <p style="color: #ccc;">${message}</p>
+            <button onclick="location.reload()" style="margin-top: 20px; padding: 12px 30px; background: #e50914; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem;">Reintentar</button>
+        </div>
+    `;
 }
 
 // Procesar datos y crear visualizaciones
 function processData() {
-    // 1. Calcular métricas
     calculateMetrics();
-    
-    // 2. Top 10 Directores
     createDirectorsChart();
-    
-    // 3. Películas vs Series
     createTypeCharts();
-    
-    // 4. Top 5 Categorías
     createCategoriesChart();
-    
-    // 5. Mostrar tabla de datos
     populateDataTable();
 }
 
 // Calcular métricas
 function calculateMetrics() {
-    // Total de títulos
     const totalTitles = netflixData.length;
     
-    // Contar películas y series
     moviesCount = netflixData.filter(item => item.type === 'Movie').length;
     showsCount = netflixData.filter(item => item.type === 'TV Show').length;
     
     // Contar directores únicos
-    const directors = netflixData
-        .map(item => item.director)
-        .filter(director => director && director !== 'Unknown' && director !== '');
-    const uniqueDirectors = [...new Set(directors)].length;
+    const directors = new Set();
+    netflixData.forEach(item => {
+        const director = item.director;
+        if (director && director.trim() !== '') {
+            director.split(',').forEach(d => {
+                const cleaned = d.trim();
+                if (cleaned) directors.add(cleaned);
+            });
+        }
+    });
     
     // Actualizar métricas en la interfaz
     document.getElementById('total-titles').textContent = totalTitles.toLocaleString();
     document.getElementById('total-movies').textContent = moviesCount.toLocaleString();
     document.getElementById('total-shows').textContent = showsCount.toLocaleString();
-    document.getElementById('total-directors').textContent = uniqueDirectors.toLocaleString();
+    document.getElementById('total-directors').textContent = directors.size.toLocaleString();
 }
 
 // 1. Gráfico de Top 10 Directores
 function createDirectorsChart() {
-    // Contar directores
     const directorCounts = {};
     
     netflixData.forEach(item => {
         const director = item.director;
-        if (director && director !== 'Unknown' && director !== '') {
-            // Algunos registros tienen múltiples directores separados por coma
-            const directors = director.split(',').map(d => d.trim());
-            directors.forEach(d => {
-                directorCounts[d] = (directorCounts[d] || 0) + 1;
+        if (director && director.trim() !== '') {
+            director.split(',').forEach(d => {
+                const cleaned = d.trim();
+                if (cleaned) {
+                    directorCounts[cleaned] = (directorCounts[cleaned] || 0) + 1;
+                }
             });
         }
     });
@@ -114,7 +127,6 @@ function createDirectorsChart() {
     const directorNames = sortedDirectors.map(item => item[0]);
     const directorValues = sortedDirectors.map(item => item[1]);
     
-    // Crear gráfico
     const ctx = document.getElementById('directorsChart').getContext('2d');
     new Chart(ctx, {
         type: 'bar',
@@ -123,11 +135,10 @@ function createDirectorsChart() {
             datasets: [{
                 label: 'Número de títulos',
                 data: directorValues,
-                backgroundColor: Array(10).fill(chartColors.red).map((color, i) => 
-                    `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, ${0.7 + i * 0.03})`
-                ),
+                backgroundColor: chartColors.red,
                 borderColor: chartColors.darkRed,
-                borderWidth: 1
+                borderWidth: 1,
+                borderRadius: 4
             }]
         },
         options: {
@@ -139,6 +150,11 @@ function createDirectorsChart() {
                     display: false
                 },
                 tooltip: {
+                    backgroundColor: '#1a1a2e',
+                    titleColor: '#fff',
+                    bodyColor: '#e50914',
+                    borderColor: '#e50914',
+                    borderWidth: 1,
                     callbacks: {
                         label: function(context) {
                             return `Títulos: ${context.raw}`;
@@ -151,12 +167,25 @@ function createDirectorsChart() {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Número de títulos'
+                        text: 'Número de títulos',
+                        color: '#8892b0'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#ccc'
                     }
                 },
                 y: {
                     ticks: {
-                        autoSkip: false
+                        color: '#ccc',
+                        font: {
+                            size: 11
+                        }
+                    },
+                    grid: {
+                        display: false
                     }
                 }
             }
@@ -166,12 +195,10 @@ function createDirectorsChart() {
 
 // 2. Gráficos de Películas vs Series
 function createTypeCharts() {
-    // Datos para gráficos
     const typeLabels = ['Películas', 'Series TV'];
     const typeData = [moviesCount, showsCount];
-    
-    // Colores
     const typeColors = [chartColors.red, chartColors.blue];
+    const total = moviesCount + showsCount;
     
     // Gráfico de torta
     const pieCtx = document.getElementById('typePieChart').getContext('2d');
@@ -182,8 +209,8 @@ function createTypeCharts() {
             datasets: [{
                 data: typeData,
                 backgroundColor: typeColors,
-                borderColor: ['white', 'white'],
-                borderWidth: 2
+                borderColor: '#1a1a2e',
+                borderWidth: 3
             }]
         },
         options: {
@@ -191,16 +218,26 @@ function createTypeCharts() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'right'
+                    position: 'bottom',
+                    labels: {
+                        color: '#fff',
+                        padding: 20,
+                        font: {
+                            size: 12
+                        }
+                    }
                 },
                 tooltip: {
+                    backgroundColor: '#1a1a2e',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#e50914',
+                    borderWidth: 1,
                     callbacks: {
                         label: function(context) {
-                            const label = context.label || '';
-                            const value = context.raw || 0;
-                            const total = moviesCount + showsCount;
-                            const percentage = Math.round((value / total) * 100);
-                            return `${label}: ${value} (${percentage}%)`;
+                            const value = context.raw;
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: ${value.toLocaleString()} (${percentage}%)`;
                         }
                     }
                 }
@@ -218,8 +255,9 @@ function createTypeCharts() {
                 label: 'Cantidad',
                 data: typeData,
                 backgroundColor: typeColors,
-                borderColor: typeColors.map(color => color.replace('0.8', '1')),
-                borderWidth: 1
+                borderColor: typeColors.map(c => c),
+                borderWidth: 1,
+                borderRadius: 8
             }]
         },
         options: {
@@ -230,9 +268,16 @@ function createTypeCharts() {
                     display: false
                 },
                 tooltip: {
+                    backgroundColor: '#1a1a2e',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#e50914',
+                    borderWidth: 1,
                     callbacks: {
                         label: function(context) {
-                            return `Cantidad: ${context.raw}`;
+                            const value = context.raw;
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `Cantidad: ${value.toLocaleString()} (${percentage}%)`;
                         }
                     }
                 }
@@ -242,13 +287,22 @@ function createTypeCharts() {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Cantidad de títulos'
+                        text: 'Cantidad de títulos',
+                        color: '#8892b0'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#ccc'
                     }
                 },
                 x: {
-                    title: {
-                        display: true,
-                        text: 'Tipo'
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#ccc'
                     }
                 }
             }
@@ -258,16 +312,16 @@ function createTypeCharts() {
 
 // 3. Gráfico de Top 5 Categorías
 function createCategoriesChart() {
-    // Extraer y contar categorías
     const categoryCounts = {};
     
     netflixData.forEach(item => {
         const categories = item.listed_in;
-        if (categories) {
-            // Dividir por coma y limpiar
-            const categoryList = categories.split(',').map(cat => cat.trim());
-            categoryList.forEach(cat => {
-                categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+        if (categories && categories.trim() !== '') {
+            categories.split(',').forEach(cat => {
+                const cleaned = cat.trim();
+                if (cleaned) {
+                    categoryCounts[cleaned] = (categoryCounts[cleaned] || 0) + 1;
+                }
             });
         }
     });
@@ -280,30 +334,26 @@ function createCategoriesChart() {
     const categoryNames = sortedCategories.map(item => item[0]);
     const categoryValues = sortedCategories.map(item => item[1]);
     
-    // Crear gráfico
+    const barColors = [
+        chartColors.red,
+        chartColors.green,
+        chartColors.blue,
+        chartColors.yellow,
+        chartColors.purple
+    ];
+    
     const ctx = document.getElementById('categoriesChart').getContext('2d');
     new Chart(ctx, {
-        type: 'horizontalBar',
+        type: 'bar',
         data: {
             labels: categoryNames,
             datasets: [{
                 label: 'Número de títulos',
                 data: categoryValues,
-                backgroundColor: [
-                    chartColors.red,
-                    chartColors.green,
-                    chartColors.blue,
-                    chartColors.yellow,
-                    chartColors.purple
-                ],
-                borderColor: [
-                    chartColors.darkRed,
-                    '#1e7e34',
-                    '#0056b3',
-                    '#d39e00',
-                    '#59359a'
-                ],
-                borderWidth: 1
+                backgroundColor: barColors,
+                borderColor: barColors,
+                borderWidth: 1,
+                borderRadius: 4
             }]
         },
         options: {
@@ -315,9 +365,14 @@ function createCategoriesChart() {
                     display: false
                 },
                 tooltip: {
+                    backgroundColor: '#1a1a2e',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#e50914',
+                    borderWidth: 1,
                     callbacks: {
                         label: function(context) {
-                            return `Títulos: ${context.raw}`;
+                            return `Títulos: ${context.raw.toLocaleString()}`;
                         }
                     }
                 }
@@ -327,12 +382,25 @@ function createCategoriesChart() {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Número de títulos'
+                        text: 'Número de títulos',
+                        color: '#8892b0'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#ccc'
                     }
                 },
                 y: {
                     ticks: {
-                        autoSkip: false
+                        color: '#ccc',
+                        font: {
+                            size: 11
+                        }
+                    },
+                    grid: {
+                        display: false
                     }
                 }
             }
@@ -345,7 +413,6 @@ function populateDataTable() {
     const tableBody = document.getElementById('table-body');
     tableBody.innerHTML = '';
     
-    // Tomar solo las primeras 10 filas
     const first10 = netflixData.slice(0, 10);
     
     first10.forEach(item => {
@@ -358,14 +425,9 @@ function populateDataTable() {
         
         // Tipo
         const typeCell = document.createElement('td');
-        typeCell.textContent = item.type || 'N/A';
-        if (item.type === 'Movie') {
-            typeCell.style.color = chartColors.red;
-            typeCell.style.fontWeight = 'bold';
-        } else {
-            typeCell.style.color = chartColors.blue;
-            typeCell.style.fontWeight = 'bold';
-        }
+        const isMovie = item.type === 'Movie';
+        typeCell.textContent = isMovie ? 'Película' : 'Serie TV';
+        typeCell.className = isMovie ? 'type-movie' : 'type-show';
         row.appendChild(typeCell);
         
         // Director

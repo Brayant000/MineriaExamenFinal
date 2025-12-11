@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎬 Netflix Data Analysis Dashboard</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -16,78 +16,95 @@
             <p class="subtitle">Visualización interactiva del dataset de Netflix</p>
         </header>
 
-        <!-- Sección de métricas -->
-        <section class="metrics">
-            <div class="metric-card">
-                <h3>Total de Títulos</h3>
-                <p id="total-titles">0</p>
-            </div>
-            <div class="metric-card">
-                <h3>Películas</h3>
-                <p id="total-movies">0</p>
-            </div>
-            <div class="metric-card">
-                <h3>Series TV</h3>
-                <p id="total-shows">0</p>
-            </div>
-            <div class="metric-card">
-                <h3>Directores</h3>
-                <p id="total-directors">0</p>
-            </div>
-        </section>
+        <!-- Loading State -->
+        <div id="loading" class="loading-container">
+            <div class="spinner"></div>
+            <p>Cargando datos de Netflix...</p>
+        </div>
 
-        <!-- Visualización 1: Top 10 Directores -->
-        <section class="chart-section">
-            <h2><i class="fas fa-trophy"></i> Top 10 Directores con más títulos</h2>
-            <div class="chart-container">
-                <canvas id="directorsChart"></canvas>
-            </div>
-        </section>
-
-        <!-- Visualización 2: Películas vs Series -->
-        <section class="chart-section">
-            <h2><i class="fas fa-chart-pie"></i> Distribución: Películas vs Series TV</h2>
-            <div class="comparison-charts">
-                <div class="chart-container">
-                    <canvas id="typePieChart"></canvas>
+        <!-- Dashboard Content -->
+        <div id="dashboard-content" style="display: none;">
+            <!-- Métricas -->
+            <section class="metrics">
+                <div class="metric-card">
+                    <span class="metric-icon">🎬</span>
+                    <h3>Total de Títulos</h3>
+                    <p id="total-titles">0</p>
                 </div>
-                <div class="chart-container">
-                    <canvas id="typeBarChart"></canvas>
+                <div class="metric-card">
+                    <span class="metric-icon">🎥</span>
+                    <h3>Películas</h3>
+                    <p id="total-movies">0</p>
                 </div>
-            </div>
-        </section>
+                <div class="metric-card">
+                    <span class="metric-icon">📺</span>
+                    <h3>Series TV</h3>
+                    <p id="total-shows">0</p>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-icon">🎬</span>
+                    <h3>Directores</h3>
+                    <p id="total-directors">0</p>
+                </div>
+            </section>
 
-        <!-- Visualización 3: Top 5 Categorías -->
-        <section class="chart-section">
-            <h2><i class="fas fa-tags"></i> Top 5 Categorías (Listed In)</h2>
-            <div class="chart-container">
-                <canvas id="categoriesChart"></canvas>
-            </div>
-        </section>
+            <!-- Visualización 1: Top 10 Directores -->
+            <section class="chart-section">
+                <h2><i class="fas fa-trophy"></i> Top 10 Directores con más títulos</h2>
+                <div class="chart-container">
+                    <canvas id="directorsChart"></canvas>
+                </div>
+            </section>
 
-        <!-- Tabla de datos -->
-        <section class="data-section">
-            <h2><i class="fas fa-table"></i> Vista previa de los datos (primeras 10 filas)</h2>
-            <div class="table-container">
-                <table id="data-table">
-                    <thead>
-                        <tr>
-                            <th>Título</th>
-                            <th>Tipo</th>
-                            <th>Director</th>
-                            <th>País</th>
-                            <th>Año Lanzamiento</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body">
-                        <!-- Datos se llenarán con JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
+            <!-- Visualización 2: Películas vs Series -->
+            <section class="chart-section">
+                <h2><i class="fas fa-chart-pie"></i> Distribución: Películas vs Series TV</h2>
+                <div class="comparison-charts">
+                    <div class="chart-half">
+                        <h3>Gráfico de Torta</h3>
+                        <div class="chart-container-small">
+                            <canvas id="typePieChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-half">
+                        <h3>Gráfico de Barras</h3>
+                        <div class="chart-container-small">
+                            <canvas id="typeBarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Visualización 3: Top 5 Categorías -->
+            <section class="chart-section">
+                <h2><i class="fas fa-tags"></i> Top 5 Categorías (Listed In)</h2>
+                <div class="chart-container">
+                    <canvas id="categoriesChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Tabla de datos -->
+            <section class="data-section">
+                <h2><i class="fas fa-table"></i> Vista previa de los datos (primeras 10 filas)</h2>
+                <div class="table-container">
+                    <table id="data-table">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Tipo</th>
+                                <th>Director</th>
+                                <th>País</th>
+                                <th>Año</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
 
         <footer>
-            <p>Dashboard creado para Data Mining Project | Hospedado en GitHub Pages</p>
+            <p>Dashboard creado para Data Mining Project | Netflix Data Analysis</p>
             <p class="timestamp" id="timestamp"></p>
         </footer>
     </div>
